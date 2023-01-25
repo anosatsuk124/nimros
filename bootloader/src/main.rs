@@ -2,11 +2,17 @@
 #![no_std]
 #![feature(abi_efiapi)]
 #![allow(stable_features)]
+#![feature(ptr_metadata)]
 
-use core::fmt::Write;
+use core::ffi::c_void;
+use core::{fmt::Write, mem::size_of};
 
-use core::fmt;
+use core::{fmt, ptr};
 use log::info;
+use uefi::data_types::{PhysicalAddress, Align};
+use uefi::proto::media::file::FileInfo;
+use uefi::table::boot::MemoryType;
+use uefi::Char16;
 use uefi::{
     prelude::*,
     proto::media::file::{self, File, FileAttribute, FileMode},
@@ -18,14 +24,16 @@ use uefi::{
 fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
     info!("Hello World");
-    let memmap_buf = [0x00; 4096 * 4];
+    let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
         .expect("Couldn't get the memory map");
     info!("Memory map: {:?}", &map);
-    if let Ok(mut fs) = system_table
-        .boot_services()
-        .get_image_file_system(image_handle)
+    const kernel_base_addr: PhysicalAddress = 0x100000;
     {
+        let mut fs = system_table
+            .boot_services()
+            .get_image_file_system(image_handle)
+            .expect("Couldn't get the file system");
         let mut root_dir = fs.open_volume().expect("Cannot open the root directory");
 
         let mut file = root_dir
@@ -40,7 +48,44 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
         map.save(&mut file).expect("Couldn't save");
         file.close();
-    };
+
+        let mut kernel_file = root_dir
+            .open(cstr16!("\\kernel"), FileMode::Read, FileAttribute::empty())
+            .expect("Cannot open the kernel");
+        const kernel_info_size: usize = size_of::<&FileInfo>() + size_of::<&Char16>() * 8;
+        let mut kernel_info_buffer = [0x00; 100000];
+        let kernel_info: &FileInfo = kernel_file
+            .get_info(&mut kernel_info_buffer)
+            .expect("Couldn't get the kernel file info.");
+
+        let base_addr = system_table
+            .boot_services()
+            .allocate_pages(
+                boot::AllocateType::Address(kernel_base_addr),
+                MemoryType::LOADER_DATA,
+                ((kernel_info.file_size() + 0xfff) / 0x1000) as usize,
+            )
+            .expect("Couldn't allocate pages");
+
+        let mut allocated_buffer = unsafe {
+            (ptr::from_raw_parts_mut(base_addr as *mut (), kernel_info.file_size() as usize)
+                as *mut [u8])
+                .as_mut()
+        }
+        .expect("Cannot cast to a buffer");
+        kernel_file
+            .into_regular_file()
+            .expect("Cannot convert into a regular file")
+            .read(&mut allocated_buffer);
+    }
+
+    let status = system_table.exit_boot_services(image_handle, &mut memmap_buf);
+
+    let entry_addr = (kernel_base_addr + 24) as *const u64;
+    type EntryPointType = fn() -> c_void;
+    let entry_point = unsafe { (entry_addr as *const EntryPointType).as_ref().expect("") };
+    entry_point();
+    info!("All Done");
 
     loop {}
     return Status::SUCCESS;

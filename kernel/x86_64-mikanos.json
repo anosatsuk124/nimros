@@ -9,6 +9,15 @@
     "executables": true,
     "linker-flavor": "ld.lld",
     "linker": "rust-lld",
+    "pre-link-args": {
+        "ld": [
+            "--entry=kernel_main",
+            "--image-base=0x100000",
+            "--static",
+            "-z",
+            "norelro"
+        ]
+    },
     "panic-strategy": "abort",
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float"

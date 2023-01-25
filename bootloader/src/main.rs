@@ -26,21 +26,22 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         .boot_services()
         .get_image_file_system(image_handle)
     {
-        if let Ok(mut root_dir) = fs.open_volume() {
-            let mut file = root_dir
-                .open(
-                    cstr16!("memmap"),
-                    FileMode::CreateReadWrite,
-                    FileAttribute::empty(),
-                )
-                .expect("Cannot open the file")
-                .into_regular_file()
-                .expect("This is not a regular file.");
+        let mut root_dir = fs.open_volume().expect("Cannot open the root directory");
 
-            map.save(&mut file).expect("Couldn't save");
-            file.close();
-        };
+        let mut file = root_dir
+            .open(
+                cstr16!("memmap"),
+                FileMode::CreateReadWrite,
+                FileAttribute::empty(),
+            )
+            .expect("Cannot open the file")
+            .into_regular_file()
+            .expect("This is not a regular file.");
+
+        map.save(&mut file).expect("Couldn't save");
+        file.close();
     };
+
     loop {}
     return Status::SUCCESS;
 }
@@ -100,12 +101,6 @@ impl<const N: usize> MemoryMap<N> {
         .expect("Couldn't write.");
 
         if let Some(map_buffer) = self.map_buffer {
-            info!(
-                "map.buffer = {:?}, map.map_size = {:?}",
-                map_buffer,
-                map_buffer.len()
-            );
-
             for (i, phys_addr) in map_buffer.chunks(self.descriptor_size).enumerate() {
                 if let Some(desc) =
                     unsafe { (*phys_addr.as_ptr() as *const MemoryDescriptor).as_ref() }

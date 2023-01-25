@@ -1,3 +1,2 @@
 [workspace]
-members = ["bootloader"]
-
+members = ["bootloader", "kernel"]

@@ -4,15 +4,14 @@
 #![allow(stable_features)]
 #![feature(ptr_metadata)]
 
-use core::ffi::c_void;
+use byteorder::{ByteOrder, LittleEndian};
 use core::{fmt::Write, mem::size_of};
 
-use core::{fmt, ptr};
+use core::{fmt, mem, ptr};
 use log::info;
-use uefi::data_types::{PhysicalAddress, Align};
+use uefi::data_types::{Align, PhysicalAddress};
 use uefi::proto::media::file::FileInfo;
 use uefi::table::boot::MemoryType;
-use uefi::Char16;
 use uefi::{
     prelude::*,
     proto::media::file::{self, File, FileAttribute, FileMode},
@@ -23,7 +22,6 @@ use uefi::{
 #[entry]
 fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
-    info!("Hello World");
     let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
         .expect("Couldn't get the memory map");
@@ -52,8 +50,11 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         let mut kernel_file = root_dir
             .open(cstr16!("\\kernel"), FileMode::Read, FileAttribute::empty())
             .expect("Cannot open the kernel");
-        const kernel_info_size: usize = size_of::<&FileInfo>() + size_of::<&Char16>() * 8;
-        let mut kernel_info_buffer = [0x00; 100000];
+        // FIXME: This size is a hacky value.
+        const kernel_info_size: usize = size_of::<&FileInfo>() * 8;
+        let mut kernel_info_buffer = [0x00; kernel_info_size];
+        let mut kernel_info_buffer =
+            FileInfo::align_buf(&mut kernel_info_buffer).expect("Cannot align");
         let kernel_info: &FileInfo = kernel_file
             .get_info(&mut kernel_info_buffer)
             .expect("Couldn't get the kernel file info.");
@@ -68,26 +69,40 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             .expect("Couldn't allocate pages");
 
         let mut allocated_buffer = unsafe {
-            (ptr::from_raw_parts_mut(base_addr as *mut (), kernel_info.file_size() as usize)
-                as *mut [u8])
-                .as_mut()
-        }
-        .expect("Cannot cast to a buffer");
-        kernel_file
+            core::slice::from_raw_parts_mut(
+                (base_addr) as *mut u8,
+                kernel_info.file_size() as usize,
+            )
+        };
+
+        let mut kernel_file = kernel_file
             .into_regular_file()
-            .expect("Cannot convert into a regular file")
-            .read(&mut allocated_buffer);
+            .expect("Cannot convert into a regular file");
+
+        kernel_file
+            .read(&mut allocated_buffer)
+            .expect("Couldn't read the kernel");
+
+        kernel_file.close();
+
+        info!("file size: {}", kernel_info.file_size());
+        info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
+        let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
     }
+    type EntryPointType = extern "C" fn() -> !;
 
-    let status = system_table.exit_boot_services(image_handle, &mut memmap_buf);
+    let buf = unsafe { core::slice::from_raw_parts((kernel_base_addr as u64 + 24) as *mut u8, 8) };
+    let kernel_main_addr = LittleEndian::read_u64(&buf);
+    info!("base addr: {:x}", kernel_base_addr);
+    info!("main addr: {:x}", kernel_main_addr);
+    let entry_point: EntryPointType =
+        unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
+    // TODO: Make the exit boot services success.
+    // let status = system_table
+    //     .exit_boot_services(image_handle, &mut memmap_buf)
+    //     .unwrap();
+    (entry_point)();
 
-    let entry_addr = (kernel_base_addr + 24) as *const u64;
-    type EntryPointType = fn() -> c_void;
-    let entry_point = unsafe { (entry_addr as *const EntryPointType).as_ref().expect("") };
-    entry_point();
-    info!("All Done");
-
-    loop {}
     return Status::SUCCESS;
 }
 

@@ -3,11 +3,6 @@
 
 use core::{arch::asm, panic::PanicInfo};
 
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
 #[no_mangle]
 pub extern "C" fn kernel_main() -> ! {
     loop {
@@ -15,4 +10,9 @@ pub extern "C" fn kernel_main() -> ! {
             asm!("hlt");
         }
     }
+}
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
 }

@@ -14,10 +14,12 @@ clean:
 
 bootloader-build:
 	mkdir -p $(dist_dir)
-	cd $(bootloader_dir); \
-	cargo build -Z unstable-options --out-dir ../$(dist_dir)
+	docker compose run bootloader
+#	cd $(bootloader_dir); \
+#	cargo build -Z unstable-options --out-dir ../$(dist_dir)
 
 kernel-build:
 	mkdir -p $(dist_dir)
-	cd $(kernel_dir); \
-	cargo build -Z unstable-options --out-dir ../$(dist_dir)
+	docker compose run kernel
+#	cd $(kernel_dir); \
+#	cargo build -Z unstable-options --out-dir ../$(dist_dir)

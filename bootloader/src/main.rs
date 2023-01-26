@@ -7,7 +7,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 use core::{fmt::Write, mem::size_of};
 
-use core::{fmt, mem, ptr};
+use core::{fmt, mem};
 use log::info;
 use uefi::data_types::{Align, PhysicalAddress};
 use uefi::proto::media::file::FileInfo;
@@ -97,10 +97,9 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
-    // TODO: Make the exit boot services success.
-    // let status = system_table
-    //     .exit_boot_services(image_handle, &mut memmap_buf)
-    //     .unwrap();
+    let status = system_table
+        .exit_boot_services(image_handle, &mut memmap_buf)
+        .unwrap();
     (entry_point)();
 
     return Status::SUCCESS;

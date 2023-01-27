@@ -25,7 +25,6 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
         .expect("Couldn't get the memory map");
-    info!("Memory map: {:?}", &map);
     const kernel_base_addr: PhysicalAddress = 0x100000;
     {
         let mut fs = system_table

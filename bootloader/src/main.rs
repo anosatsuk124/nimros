@@ -4,14 +4,14 @@
 #![allow(stable_features)]
 #![feature(ptr_metadata)]
 
-use byteorder::{ByteOrder, LittleEndian};
 use core::{fmt::Write, mem::size_of};
+use uefi::proto::console::gop::GraphicsOutput;
 
 use core::{fmt, mem};
 use log::info;
 use uefi::data_types::{Align, PhysicalAddress};
 use uefi::proto::media::file::FileInfo;
-use uefi::table::boot::MemoryType;
+use uefi::table::boot::{MemoryType, OpenProtocolParams};
 use uefi::{
     prelude::*,
     proto::media::file::{self, File, FileAttribute, FileMode},
@@ -22,6 +22,34 @@ use uefi::{
 #[entry]
 fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
+    let frame_buffer = {
+        let boot_services = system_table.boot_services();
+        let gop_handle = boot_services
+            .get_handle_for_protocol::<GraphicsOutput>()
+            .expect("Couldn't get the GOP handle");
+        let gop_params = OpenProtocolParams {
+            handle: gop_handle,
+            agent: image_handle,
+            controller: None,
+        };
+        let mut gop = unsafe {
+            boot_services.open_protocol::<GraphicsOutput>(
+                gop_params,
+                boot::OpenProtocolAttributes::GetProtocol,
+            )
+        }
+        .expect("Couldn't open the GOP");
+        let gop_mode_info = &gop.current_mode_info();
+        info!(
+            "Resolution: {:?}, Pixel Format: {:?}, {:?} pixels/line",
+            &gop_mode_info.resolution(),
+            &gop_mode_info.pixel_format(),
+            &gop_mode_info.stride()
+        );
+        let mut frame_buffer = gop.frame_buffer();
+        (frame_buffer.as_mut_ptr(), frame_buffer.size() as u64)
+    };
+
     let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
         .expect("Couldn't get the memory map");
@@ -84,22 +112,26 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
         kernel_file.close();
 
-        info!("file size: {}", kernel_info.file_size());
+        info!("file size: {:x}", kernel_info.file_size());
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
         let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
     }
-    type EntryPointType = extern "C" fn() -> !;
+    type EntryPointType = extern "sysv64" fn(frame_buffer: (*mut u8, u64)) -> !;
 
-    let buf = unsafe { core::slice::from_raw_parts((kernel_base_addr as u64 + 24) as *mut u8, 8) };
-    let kernel_main_addr = LittleEndian::read_u64(&buf);
+    let kernel_main_addr = unsafe {
+        core::slice::from_raw_parts(
+            (kernel_base_addr as u64 + 24) as *mut u8,
+            mem::size_of::<EntryPointType>(),
+        )
+        .as_ptr()
+    } as u64;
     info!("base addr: {:x}", kernel_base_addr);
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
-    let status = system_table
-        .exit_boot_services(image_handle, &mut memmap_buf)
-        .unwrap();
-    (entry_point)();
+    if let Ok(status) = system_table.exit_boot_services(image_handle, &mut memmap_buf) {
+        entry_point(frame_buffer);
+    };
 
     return Status::SUCCESS;
 }

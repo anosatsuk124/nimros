@@ -10,4 +10,3 @@ log = "0.4"
 uefi = { version = "0.19", features = ["alloc"] }
 uefi-services = "0.16"
 uefi-macros = "0.10.0"
-byteorder = { version = "1.4.3", default-features = false }

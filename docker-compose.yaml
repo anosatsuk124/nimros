@@ -2,13 +2,13 @@ version: "3"
 services:
   bootloader:
     build: .
-    command: /bin/sh -c 'cd /app/bootloader && cargo build -Z unstable-options --out-dir /dist'
+    command: /bin/sh -c 'cd /app/bootloader && cargo build -Z unstable-options --out-dir /dist --release'
     volumes:
       - ./dist/:/dist
       - ./:/app
   kernel:
     build: .
-    command: /bin/sh -c 'cd /app/kernel && cargo build -Z unstable-options --out-dir /dist'
+    command: /bin/sh -c 'cd /app/kernel && cargo build -Z unstable-options --out-dir /dist --release'
     volumes:
       - ./dist/:/dist
       - ./:/app

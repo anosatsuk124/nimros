@@ -4,7 +4,6 @@
 #![allow(stable_features)]
 #![feature(ptr_metadata)]
 
-use byteorder::{ByteOrder, LittleEndian};
 use core::{fmt::Write, mem::size_of};
 use uefi::proto::console::gop::GraphicsOutput;
 
@@ -23,7 +22,7 @@ use uefi::{
 #[entry]
 fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
-    {
+    let frame_buffer = {
         let boot_services = system_table.boot_services();
         let gop_handle = boot_services
             .get_handle_for_protocol::<GraphicsOutput>()
@@ -48,12 +47,8 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             &gop_mode_info.stride()
         );
         let mut frame_buffer = gop.frame_buffer();
-        for i in 0..frame_buffer.size() {
-            unsafe {
-                frame_buffer.write_byte(i, 255);
-            }
-        }
-    }
+        (frame_buffer.as_mut_ptr(), frame_buffer.size() as u64)
+    };
 
     let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
@@ -117,24 +112,26 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
         kernel_file.close();
 
-        info!("file size: {}", kernel_info.file_size());
+        info!("file size: {:x}", kernel_info.file_size());
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
-    }
-    {
         let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
     }
-    let status = system_table
-        .exit_boot_services(image_handle, &mut memmap_buf)
-        .unwrap();
-    type EntryPointType = extern "C" fn() -> !;
+    type EntryPointType = extern "sysv64" fn(frame_buffer: (*mut u8, u64)) -> !;
 
-    let buf = unsafe { core::slice::from_raw_parts((kernel_base_addr as u64 + 24) as *mut u8, 8) };
-    let kernel_main_addr = LittleEndian::read_u64(&buf);
+    let kernel_main_addr = unsafe {
+        core::slice::from_raw_parts(
+            (kernel_base_addr as u64 + 24) as *mut u8,
+            mem::size_of::<EntryPointType>(),
+        )
+        .as_ptr()
+    } as u64;
     info!("base addr: {:x}", kernel_base_addr);
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
-    (entry_point)();
+    if let Ok(status) = system_table.exit_boot_services(image_handle, &mut memmap_buf) {
+        entry_point(frame_buffer);
+    };
 
     return Status::SUCCESS;
 }

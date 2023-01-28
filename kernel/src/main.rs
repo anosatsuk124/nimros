@@ -2,7 +2,7 @@
 #![no_main]
 
 use core::{arch::asm, panic::PanicInfo};
-use mikanlib::{FrameBufferConfig, FrameBuffer, PixelColor};
+use mikanlib::{FrameBuffer, FrameBufferConfig, PixelColor};
 
 #[no_mangle]
 pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> ! {
@@ -11,6 +11,12 @@ pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> !
     for x in 0..frame_buffer.h_resolution {
         for y in 0..frame_buffer.v_resolution {
             frame_buffer.write_pixel(x, y, &white);
+        }
+    }
+    let green = PixelColor::rgb(0, 255, 0);
+    for x in 0..200 {
+        for y in 0..100 {
+            frame_buffer.write_pixel(100 + x, 100 + y, &green);
         }
     }
     loop {

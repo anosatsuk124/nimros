@@ -138,7 +138,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             (kernel_base_addr as u64 + ENTRY_POINT_OFFSET) as *mut u8,
             mem::size_of::<EntryPointType>(),
         )
-            .as_ptr()
+        .as_ptr()
     } as u64;
     info!("base addr: {:x}", kernel_base_addr);
     info!("main addr: {:x}", kernel_main_addr);

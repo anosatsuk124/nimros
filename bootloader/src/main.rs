@@ -23,7 +23,7 @@ use uefi::{
 #[entry]
 fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
-    let frame_buffer = {
+    let frame_buffer_config = {
         let boot_services = system_table.boot_services();
         let gop_handle = boot_services
             .get_handle_for_protocol::<GraphicsOutput>()
@@ -55,11 +55,11 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         };
         FrameBufferConfig {
             frame_buffer: frame_buffer.as_mut_ptr(),
-            pixels_per_scan_line: gop_mode_info.stride(),
-            h_resolution: gop_mode_info.resolution().0,
-            v_resolution: gop_mode_info.resolution().1,
+            pixels_per_scan_line: gop_mode_info.stride() as u64,
+            h_resolution: gop_mode_info.resolution().0 as u64,
+            v_resolution: gop_mode_info.resolution().1 as u64,
             pixel_format,
-            size: frame_buffer.size(),
+            size: frame_buffer.size() as u64,
         }
     };
 
@@ -129,21 +129,23 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
         let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
     }
-    type EntryPointType = extern "sysv64" fn(frame_buffer_config: FrameBufferConfig) -> !;
+    type EntryPointType = extern "sysv64" fn(&FrameBufferConfig) -> !;
 
+    // HACK: This 0x1000 is a hacky value. It should be refactored!
+    const ENTRY_POINT_OFFSET: u64 = 0x1000;
     let kernel_main_addr = unsafe {
         core::slice::from_raw_parts(
-            (kernel_base_addr as u64 + 24) as *mut u8,
+            (kernel_base_addr as u64 + ENTRY_POINT_OFFSET) as *mut u8,
             mem::size_of::<EntryPointType>(),
         )
-        .as_ptr()
-    };
+            .as_ptr()
+    } as u64;
     info!("base addr: {:x}", kernel_base_addr);
-    info!("main addr: {:?}", kernel_main_addr);
+    info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
-        unsafe { mem::transmute::<*const u8, EntryPointType>(kernel_main_addr) };
+        unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
     if let Ok(status) = system_table.exit_boot_services(image_handle, &mut memmap_buf) {
-        entry_point(frame_buffer);
+        entry_point(&frame_buffer_config);
     };
 
     return Status::SUCCESS;

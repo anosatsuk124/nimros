@@ -5,7 +5,7 @@ use core::{arch::asm, panic::PanicInfo};
 use mikanlib::{FrameBufferConfig, FrameBuffer, PixelColor};
 
 #[no_mangle]
-pub extern "sysv64" fn kernel_main(frame_buffer_config: FrameBufferConfig) -> ! {
+pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> ! {
     let mut frame_buffer = FrameBuffer::from(frame_buffer_config);
     let white = PixelColor::rgb(255, 255, 255);
     for x in 0..frame_buffer.h_resolution {

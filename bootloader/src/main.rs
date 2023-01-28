@@ -5,7 +5,8 @@
 #![feature(ptr_metadata)]
 
 use core::{fmt::Write, mem::size_of};
-use uefi::proto::console::gop::GraphicsOutput;
+use mikanlib::FrameBufferConfig;
+use uefi::proto::console::gop::{GraphicsOutput, PixelFormat};
 
 use core::{fmt, mem};
 use log::info;
@@ -47,7 +48,19 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             &gop_mode_info.stride()
         );
         let mut frame_buffer = gop.frame_buffer();
-        (frame_buffer.as_mut_ptr(), frame_buffer.size() as u64)
+        let pixel_format = match gop_mode_info.pixel_format() {
+            PixelFormat::Rgb => mikanlib::PixelFormat::PixelRGBResv8bitPerColor,
+            PixelFormat::Bgr => mikanlib::PixelFormat::PixelBGRResv8bitPerColor,
+            _ => unimplemented!(),
+        };
+        FrameBufferConfig {
+            frame_buffer: frame_buffer.as_mut_ptr(),
+            pixels_per_scan_line: gop_mode_info.stride(),
+            h_resolution: gop_mode_info.resolution().0,
+            v_resolution: gop_mode_info.resolution().1,
+            pixel_format,
+            size: frame_buffer.size(),
+        }
     };
 
     let mut memmap_buf = [0x00; 4096 * 4];
@@ -116,7 +129,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
         let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
     }
-    type EntryPointType = extern "sysv64" fn(frame_buffer: (*mut u8, u64)) -> !;
+    type EntryPointType = extern "sysv64" fn(frame_buffer_config: FrameBufferConfig) -> !;
 
     let kernel_main_addr = unsafe {
         core::slice::from_raw_parts(
@@ -124,11 +137,11 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             mem::size_of::<EntryPointType>(),
         )
         .as_ptr()
-    } as u64;
+    };
     info!("base addr: {:x}", kernel_base_addr);
-    info!("main addr: {:x}", kernel_main_addr);
+    info!("main addr: {:?}", kernel_main_addr);
     let entry_point: EntryPointType =
-        unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
+        unsafe { mem::transmute::<*const u8, EntryPointType>(kernel_main_addr) };
     if let Ok(status) = system_table.exit_boot_services(image_handle, &mut memmap_buf) {
         entry_point(frame_buffer);
     };

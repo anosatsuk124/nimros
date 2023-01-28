@@ -1,2 +1,2 @@
 [workspace]
-members = ["bootloader", "kernel"]
+members = ["bootloader", "kernel", "mikanlib"]

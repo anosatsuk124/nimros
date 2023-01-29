@@ -66,7 +66,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mut memmap_buf = [0x00; 4096 * 4];
     let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
         .expect("Couldn't get the memory map");
-    const kernel_base_addr: PhysicalAddress = 0x100000;
+    const KERNEL_BASE_ADDR: PhysicalAddress = 0x100000;
     {
         let mut fs = system_table
             .boot_services()
@@ -91,8 +91,8 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             .open(cstr16!("\\kernel"), FileMode::Read, FileAttribute::empty())
             .expect("Cannot open the kernel");
         // FIXME: This size is a hacky value.
-        const kernel_info_size: usize = size_of::<&FileInfo>() * 8;
-        let mut kernel_info_buffer = [0x00; kernel_info_size];
+        const KERNEL_INFO_SIZE: usize = size_of::<&FileInfo>() * 8;
+        let mut kernel_info_buffer = [0x00; KERNEL_INFO_SIZE];
         let kernel_info_buffer: &mut [u8] =
             FileInfo::align_buf(&mut kernel_info_buffer).expect("Cannot align");
         let kernel_info: &FileInfo = kernel_file
@@ -102,7 +102,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         let base_addr = system_table
             .boot_services()
             .allocate_pages(
-                boot::AllocateType::Address(kernel_base_addr),
+                boot::AllocateType::Address(KERNEL_BASE_ADDR),
                 MemoryType::LOADER_DATA,
                 ((kernel_info.file_size() + 0xfff) / 0x1000) as usize,
             )
@@ -135,12 +135,12 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     const ENTRY_POINT_OFFSET: u64 = 0x1000;
     let kernel_main_addr = unsafe {
         core::slice::from_raw_parts(
-            (kernel_base_addr as u64 + ENTRY_POINT_OFFSET) as *mut u8,
+            (KERNEL_BASE_ADDR + ENTRY_POINT_OFFSET) as *mut u8,
             mem::size_of::<EntryPointType>(),
         )
         .as_ptr()
     } as u64;
-    info!("base addr: {:x}", kernel_base_addr);
+    info!("base addr: {:x}", KERNEL_BASE_ADDR);
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };

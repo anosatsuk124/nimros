@@ -5,7 +5,7 @@
 #![feature(ptr_metadata)]
 
 use core::{fmt::Write, mem::size_of};
-use mikanlib::FrameBufferConfig;
+use mikanlib::graphics::{FrameBufferConfig, self};
 use uefi::proto::console::gop::{GraphicsOutput, PixelFormat};
 
 use core::{fmt, mem};
@@ -49,17 +49,17 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         );
         let mut frame_buffer = gop.frame_buffer();
         let pixel_format = match gop_mode_info.pixel_format() {
-            PixelFormat::Rgb => mikanlib::PixelFormat::PixelRGBResv8bitPerColor,
-            PixelFormat::Bgr => mikanlib::PixelFormat::PixelBGRResv8bitPerColor,
+            PixelFormat::Rgb => graphics::PixelFormat::PixelRGBResv8bitPerColor,
+            PixelFormat::Bgr => graphics::PixelFormat::PixelBGRResv8bitPerColor,
             _ => unimplemented!(),
         };
         FrameBufferConfig {
             frame_buffer: frame_buffer.as_mut_ptr(),
-            pixels_per_scan_line: gop_mode_info.stride() as u64,
-            h_resolution: gop_mode_info.resolution().0 as u64,
-            v_resolution: gop_mode_info.resolution().1 as u64,
+            pixels_per_scan_line: gop_mode_info.stride(),
+            h_resolution: gop_mode_info.resolution().0,
+            v_resolution: gop_mode_info.resolution().1,
             pixel_format,
-            size: frame_buffer.size() as u64,
+            size: frame_buffer.size(),
         }
     };
 

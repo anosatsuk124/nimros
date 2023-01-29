@@ -1,5 +1,6 @@
 bootloader_dir = bootloader/
 kernel_dir = kernel/
+mikanlib_dir = mikanlib/
 dist_dir = dist/
 mnt_dir = mnt/
 
@@ -12,14 +13,18 @@ clean:
 	cargo clean
 	rm -rf $(dist_dir) $(mnt_dir)
 
+clippy:
+	cd $(bootloader_dir); \
+	cargo clippy
+	cd $(kernel_dir); \
+	cargo clippy
+	cd $(mikanlib_dir); \
+	cargo clippy
+
 bootloader-build:
 	mkdir -p $(dist_dir)
 	docker compose run bootloader
-#	cd $(bootloader_dir); \
-#	cargo build -Z unstable-options --out-dir ../$(dist_dir)
 
 kernel-build:
 	mkdir -p $(dist_dir)
 	docker compose run kernel
-#	cd $(kernel_dir); \
-#	cargo build -Z unstable-options --out-dir ../$(dist_dir)

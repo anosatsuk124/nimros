@@ -59,16 +59,18 @@ impl<'a> FrameBuffer<'a> {
     pub fn write_pixel(&mut self, x: u64, y: u64, pixel_color: &PixelColor) {
         let pixel_position = self.pixels_per_scan_line * y + x;
         let base = (4 * pixel_position) as usize;
+        let fb: &mut [u8] = self.frame_buffer;
+        #[allow(clippy::identity_op)]
         match self.pixel_format {
             PixelFormat::PixelRGBResv8bitPerColor => {
-                self.frame_buffer[base + 0] = pixel_color.r;
-                self.frame_buffer[base + 1] = pixel_color.g;
-                self.frame_buffer[base + 2] = pixel_color.b;
+                fb[base + 0] = pixel_color.r;
+                fb[base + 1] = pixel_color.g;
+                fb[base + 2] = pixel_color.b;
             }
             PixelFormat::PixelBGRResv8bitPerColor => {
-                self.frame_buffer[base + 0] = pixel_color.b;
-                self.frame_buffer[base + 1] = pixel_color.g;
-                self.frame_buffer[base + 2] = pixel_color.r;
+                fb[base + 0] = pixel_color.b;
+                fb[base + 1] = pixel_color.g;
+                fb[base + 2] = pixel_color.r;
             }
         }
     }

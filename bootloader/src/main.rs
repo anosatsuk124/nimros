@@ -93,10 +93,10 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         // FIXME: This size is a hacky value.
         const kernel_info_size: usize = size_of::<&FileInfo>() * 8;
         let mut kernel_info_buffer = [0x00; kernel_info_size];
-        let mut kernel_info_buffer =
+        let kernel_info_buffer: &mut [u8] =
             FileInfo::align_buf(&mut kernel_info_buffer).expect("Cannot align");
         let kernel_info: &FileInfo = kernel_file
-            .get_info(&mut kernel_info_buffer)
+            .get_info(kernel_info_buffer)
             .expect("Couldn't get the kernel file info.");
 
         let base_addr = system_table
@@ -108,7 +108,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             )
             .expect("Couldn't allocate pages");
 
-        let mut allocated_buffer = unsafe {
+        let allocated_buffer = unsafe {
             core::slice::from_raw_parts_mut(
                 (base_addr) as *mut u8,
                 kernel_info.file_size() as usize,
@@ -120,7 +120,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             .expect("Cannot convert into a regular file");
 
         kernel_file
-            .read(&mut allocated_buffer)
+            .read(allocated_buffer)
             .expect("Couldn't read the kernel");
 
         kernel_file.close();
@@ -144,11 +144,11 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
-    if let Ok(status) = system_table.exit_boot_services(image_handle, &mut memmap_buf) {
+    if system_table.exit_boot_services(image_handle, &mut memmap_buf).is_ok() {
         entry_point(&frame_buffer_config);
     };
 
-    return Status::SUCCESS;
+    Status::SUCCESS
 }
 
 struct RegularFileWriter<'a>(&'a mut file::RegularFile);
@@ -168,6 +168,7 @@ impl<'a> fmt::Write for RegularFileWriter<'a> {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct MemoryMap<const N: usize> {
     map_buffer: Option<[u8; N]>,

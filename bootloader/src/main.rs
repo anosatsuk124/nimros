@@ -64,7 +64,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     };
 
     let mut memmap_buf = [0x00; 4096 * 4];
-    let map = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf)
+    let map = MemoryMap::get_memory_map(system_table.boot_services(), &mut memmap_buf)
         .expect("Couldn't get the memory map");
     const KERNEL_BASE_ADDR: PhysicalAddress = 0x100000;
     {
@@ -127,7 +127,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
         info!("file size: {:x}", kernel_info.file_size());
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
-        let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), memmap_buf);
+        let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), &mut memmap_buf);
     }
     type EntryPointType = extern "sysv64" fn(&FrameBufferConfig) -> !;
 
@@ -170,20 +170,20 @@ impl<'a> fmt::Write for RegularFileWriter<'a> {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-struct MemoryMap<const N: usize> {
-    map_buffer: Option<[u8; N]>,
+struct MemoryMap<'a> {
+    map_buffer: Option<&'a mut [u8]>,
     map_key: MemoryMapKey,
     descriptor_size: usize,
     descriptor_version: u32,
 }
 
-impl<const N: usize> MemoryMap<N> {
+impl<'a> MemoryMap<'a> {
     fn get_memory_map(
         boot_services: &BootServices,
-        mut map_buffer: [u8; N],
-    ) -> Result<MemoryMap<N>> {
+        map_buffer: &'a mut [u8],
+    ) -> Result<MemoryMap<'a>> {
         let mut map;
-        match boot_services.memory_map(&mut map_buffer) {
+        match boot_services.memory_map(map_buffer) {
             Ok((map_key, map_iter)) => {
                 map = MemoryMap {
                     map_buffer: None,
@@ -206,7 +206,7 @@ impl<const N: usize> MemoryMap<N> {
         )
         .expect("Couldn't write.");
 
-        if let Some(map_buffer) = self.map_buffer {
+        if let Some(map_buffer) = &self.map_buffer {
             for (i, phys_addr) in map_buffer.chunks(self.descriptor_size).enumerate() {
                 if let Some(desc) =
                     unsafe { (*phys_addr.as_ptr() as *const MemoryDescriptor).as_ref() }

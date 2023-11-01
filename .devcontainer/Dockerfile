@@ -7,5 +7,7 @@ WORKDIR /cache
 COPY ./rust-toolchain /cache
 COPY ./Makefile /cache
 
+RUN make prepare
+
 RUN cargo init --bin && cargo build --release && \
   cd .. && rm -rf cache

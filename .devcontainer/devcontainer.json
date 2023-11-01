@@ -5,7 +5,6 @@
     "context": "../",
     "cacheFrom": "ghcr.io/anosatsuk124/nimros-devcontainer"
   },
-  "postCreateCommand": "make prepare",
   "appPort": [
     "5905:5900" // For VNC
   ],

@@ -1,0 +1,27 @@
+{
+  "name": "nimros",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "../",
+    "cacheFrom": "ghcr.io/anosatsuk124/nimros-devcontainer"
+  },
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-rust-target",
+      "target": "${containerWorkspaceFolder}/target"
+    }
+  ],
+  "postCreateCommand": "make prepare",
+  "appPort": [
+    "5905:5900" // For VNC
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers-contrib/features/nim-asdf:2": {
+      "version": "latest"
+    }
+  }
+}

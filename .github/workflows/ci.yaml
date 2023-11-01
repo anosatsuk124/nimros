@@ -3,19 +3,20 @@ name: CI
 on: push
 
 jobs:
-  name: Pre-build image and run make ci-build in dev container
-  runs-on: ubuntu-22.04
-  steps:
-    - name: Pre-build dev container image
-      uses: devcontainers/ci@v0.3
-      with:
-        imageName: ghcr.io/${{ github.repository }}-devcontainer
-        cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
-        push: always
+  ci-build:
+    name: Pre-build image and run make ci-build in dev container
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/${{ github.repository }}-devcontainer
+          cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
+          push: always
 
-    - name: Run make ci-build in dev container
-      uses: devcontainers/ci@v0.3
-      with:
-        cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
-        push: never
-        runCmd: make all
+      - name: Run make ci-build in dev container
+        uses: devcontainers/ci@v0.3
+        with:
+          cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
+          push: never
+          runCmd: make all

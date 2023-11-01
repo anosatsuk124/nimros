@@ -5,7 +5,7 @@
 #![feature(ptr_metadata)]
 
 use core::{fmt::Write, mem::size_of};
-use mikanlib::graphics::{FrameBufferConfig, self};
+use stdlib::graphics::{self, FrameBufferConfig};
 use uefi::proto::console::gop::{GraphicsOutput, PixelFormat};
 
 use core::{fmt, mem};
@@ -59,7 +59,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             h_resolution: gop_mode_info.resolution().0,
             v_resolution: gop_mode_info.resolution().1,
             pixel_format,
-            size: frame_buffer.size(),
+            size: frame_buffer.size() as u64,
         }
     };
 
@@ -144,7 +144,10 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("main addr: {:x}", kernel_main_addr);
     let entry_point: EntryPointType =
         unsafe { mem::transmute::<u64, EntryPointType>(kernel_main_addr) };
-    if system_table.exit_boot_services(image_handle, &mut memmap_buf).is_ok() {
+    if system_table
+        .exit_boot_services(image_handle, &mut memmap_buf)
+        .is_ok()
+    {
         entry_point(&frame_buffer_config);
     };
 

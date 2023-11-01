@@ -2,7 +2,7 @@
 #![no_main]
 
 use core::{arch::asm, panic::PanicInfo};
-use mikanlib::graphics::{FrameBuffer, FrameBufferConfig, PixelColor};
+use stdlib::graphics::{FrameBuffer, FrameBufferConfig, PixelColor};
 
 #[no_mangle]
 pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> ! {

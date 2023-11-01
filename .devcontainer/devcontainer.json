@@ -10,9 +10,6 @@
     "5905:5900" // For VNC
   ],
   "features": {
-    "ghcr.io/devcontainers/features/rust:1": {
-      "version": "latest"
-    },
     "ghcr.io/devcontainers-contrib/features/nim-asdf:2": {
       "version": "latest"
     }

@@ -1,2 +1,2 @@
 [workspace]
-members = ["bootloader", "kernel", "mikanlib", "tools/make-font"]
+members = ["bootloader", "kernel", "stdlib", "tools/make-font"]

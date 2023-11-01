@@ -1,5 +1,5 @@
-use core::{slice::from_raw_parts_mut, mem};
-use crate::fonts::{AsciiChar, Font, FONT_A};
+use crate::fonts::{Font, FONT_SIZE, HANKAKU_FONT};
+use core::{mem, slice::from_raw_parts_mut};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -15,12 +15,13 @@ pub struct FrameBufferConfig {
     pub h_resolution: usize,
     pub v_resolution: usize,
     pub pixel_format: PixelFormat,
-    pub size: usize,
+    pub size: u64,
 }
 
 impl<'a> From<&FrameBufferConfig> for FrameBuffer<'a> {
     fn from(value: &FrameBufferConfig) -> Self {
         let frame_buffer = unsafe { from_raw_parts_mut(value.frame_buffer, value.size as usize) };
+
         Self {
             frame_buffer,
             pixels_per_scan_line: value.pixels_per_scan_line,
@@ -31,6 +32,7 @@ impl<'a> From<&FrameBufferConfig> for FrameBuffer<'a> {
     }
 }
 
+#[repr(C)]
 pub struct FrameBuffer<'a> {
     pub frame_buffer: &'a mut [u8],
     pub pixels_per_scan_line: usize,
@@ -76,18 +78,19 @@ impl<'a> FrameBuffer<'a> {
         }
     }
 
-    pub fn write_ascii(&mut self, pos: (usize, usize), char: AsciiChar, pixel_color: &PixelColor) {
-        if char != b'A' {
-            return;
-        }
+    pub fn write_ascii(&mut self, pos: (usize, usize), char: u8, pixel_color: &PixelColor) {
+        let font = match HANKAKU_FONT.get_font(char) {
+            Ok(font) => font,
+            Err(_) => return,
+        };
 
-        let font_y_size = mem::size_of::<Font>() * 8;
-        let font_x_size = mem::size_of::<u8>() * 8;
+        let font_y_size = 16;
+        let font_x_size = 8;
         let x = pos.0;
         let y = pos.1;
         for dy in 0..font_y_size {
             for dx in 0..font_x_size {
-                if (FONT_A[dy] << dx) & 0x80 != 0 {
+                if (font[dy] << dx) & 0x80 != 0 {
                     self.write_pixel((x + dx, y + dy), pixel_color);
                 }
             }

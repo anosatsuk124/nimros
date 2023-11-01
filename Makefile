@@ -1,39 +1,67 @@
-bootloader_dir = bootloader/
-kernel_dir = kernel/
-mikanlib_dir = mikanlib/
-dist_dir = dist/
-mnt_dir = mnt/
+# Rust Variables
+DEFAULT_RUST_PROFILE	=	release
+RUST_PROFILE	=	$(DEFAULT_RUST_PROFILE)
+
+CARGO	=	cargo
+RUSTUP	=	rustup
+
+# Directories
+
+DIST_DIR	=	$(CURDIR)/dist
+MNT_DIR	=	$(CURDIR)/mnt
+
+BOOTLOADER_DIR	=	$(CURDIR)/bootloader
+KERNEL_DIR	=	$(CURDIR)/kernel
+STDLIB_DIR	=	$(CURDIR)/stdlib
+
+# Utilities
+
+RUN_SH	=	sh $(CURDIR)/run.sh
+
+# Artifacts
+
+BOOTLOADER	=	$(DIST_DIR)/bootloader.efi
+KERNEL	=	$(DIST_DIR)/kernel
 
 all:	build
 
-run:	all
-	./run.sh $(dist_dir)/bootloader.efi $(dist_dir)/kernel
+.PHONY: run
+run:	$(BOOTLOADER) $(KERNEL)
+	mkdir -p $(MNT_DIR)/EFI/BOOT
+	cp $(BOOTLOADER) $(MNT_DIR)/EFI/BOOT/BOOTX64.EFI
+	cp $(KERNEL) $(MNT_DIR)
+	$(RUN_SH)
 
+.PHONY: clean
 clean:
-	cargo clean
-	rm -rf $(dist_dir) $(mnt_dir)
+	$(CARGO) clean
+	rm -rf $(DIST_DIR) $(MNT_DIR)
 
+.PHONY: clippy
 clippy:	prepare
-	cd $(bootloader_dir); \
-	cargo clippy
-	cd $(kernel_dir); \
-	cargo clippy
-	cd $(mikanlib_dir); \
-	cargo clippy
+	cd $(BOOTLOADER_DIR); \
+	$(CARGO) clippy
+	cd $(KERNEL_DIR); \
+	$(CARGO) clippy
+	cd $(STDLIB_DIR); \
+	$(CARGO) clippy
 
+build:	$(BOOTLOADER_DIR) $(KERNEL_DIR)
+
+$(BOOTLOADER_DIR):	prepare
+	mkdir -p $(DIST_DIR)
+	cd $(BOOTLOADER_DIR); \
+	$(CARGO) build -Z unstable-options --profile $(RUST_PROFILE) --out-dir $(DIST_DIR)
+
+$(KERNEL_DIR):	prepare
+	mkdir -p $(DIST_DIR)
+	cd $(KERNEL_DIR); \
+	$(CARGO) build -Z unstable-options --profile $(RUST_PROFILE) --out-dir $(DIST_DIR)
+
+.PHONY: prepare
 prepare:
-	rustup target add x86_64-unknown-linux-gnu
-	rustup target add x86_64-unknown-uefi
-	rustup component add rust-src
+	$(RUSTUP) component add rust-src
+	$(RUSTUP) component add llvm-tools-preview
+	$(RUSTUP) target add x86_64-unknown-linux-gnu
+	$(RUSTUP) target add x86_64-unknown-uefi
 
-build:	kernel-build bootloader-build
-
-bootloader-build:	prepare
-	mkdir -p $(dist_dir)
-	cd $(bootloader_dir); \
-	cargo build -Z unstable-options --out-dir /dist --release
-
-kernel-build:	prepare
-	mkdir -p $(dist_dir)
-	cd $(kernel_dir); \
-	cargo build -Z unstable-options --out-dir /dist --release

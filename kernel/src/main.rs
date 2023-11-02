@@ -5,8 +5,8 @@ use core::{arch::asm, panic::PanicInfo};
 use stdlib::graphics::{FrameBuffer, FrameBufferConfig, PixelColor};
 
 #[no_mangle]
-pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> ! {
-    let mut frame_buffer = FrameBuffer::from(frame_buffer_config);
+pub extern "sysv64" fn kernel_main(frame_buffer_config: FrameBufferConfig) -> ! {
+    let mut frame_buffer = FrameBuffer::from(&frame_buffer_config);
     let white = PixelColor::rgb(255, 255, 255);
     for x in 0..frame_buffer.h_resolution {
         for y in 0..frame_buffer.v_resolution {
@@ -20,7 +20,7 @@ pub extern "sysv64" fn kernel_main(frame_buffer_config: &FrameBufferConfig) -> !
         }
     }
     let black = PixelColor::rgb(0, 0, 0);
-    frame_buffer.write_ascii((50, 50), b'A', &black);
+    // frame_buffer.write_ascii((50, 50), b'A', &black);
     loop {
         unsafe {
             asm!("hlt");

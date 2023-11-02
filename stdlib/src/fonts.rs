@@ -1,6 +1,6 @@
 pub const FONT_SIZE: usize = 16;
 
-pub static HANKAKU_FONT: Font = Font::new(include_bytes!("../../hankaku.bin"));
+pub static HANKAKU_FONT: Font = Font::new(include_bytes!(env!("HANKAKU_BIN")));
 
 #[derive(Educe)]
 #[educe(Deref)]
@@ -11,7 +11,7 @@ impl Font {
         Self(data)
     }
 
-    pub fn get_font(&self, char: u8) -> Result<&'static [u8], ()> {
+    pub fn get_font<'a>(&'a self, char: u8) -> Result<&'a [u8], ()> {
         let index = char as usize * FONT_SIZE;
 
         if index > self.len() {

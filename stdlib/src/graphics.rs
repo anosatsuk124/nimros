@@ -15,7 +15,7 @@ pub struct FrameBufferConfig {
     pub h_resolution: usize,
     pub v_resolution: usize,
     pub pixel_format: PixelFormat,
-    pub size: u64,
+    pub size: usize,
 }
 
 impl<'a> From<&FrameBufferConfig> for FrameBuffer<'a> {

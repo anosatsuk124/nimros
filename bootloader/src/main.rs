@@ -59,7 +59,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
             h_resolution: gop_mode_info.resolution().0,
             v_resolution: gop_mode_info.resolution().1,
             pixel_format,
-            size: frame_buffer.size() as u64,
+            size: frame_buffer.size(),
         }
     };
 
@@ -129,7 +129,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         info!("buffer ptr: {:?}", allocated_buffer.as_ptr());
         let _memmap = MemoryMap::get_memory_map(system_table.boot_services(), &mut memmap_buf);
     }
-    type EntryPointType = extern "sysv64" fn(&FrameBufferConfig) -> !;
+    type EntryPointType = extern "sysv64" fn(FrameBufferConfig) -> !;
 
     // HACK: This 0x1000 is a hacky value. It should be refactored!
     const ENTRY_POINT_OFFSET: u64 = 0x1000;
@@ -148,7 +148,7 @@ fn main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         .exit_boot_services(image_handle, &mut memmap_buf)
         .is_ok()
     {
-        entry_point(&frame_buffer_config);
+        entry_point(frame_buffer_config);
     };
 
     Status::SUCCESS

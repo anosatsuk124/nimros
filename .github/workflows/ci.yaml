@@ -36,4 +36,4 @@ jobs:
         with:
           cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
           push: never
-          runCmd: make all
+          runCmd: make build

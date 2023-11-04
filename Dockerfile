@@ -53,12 +53,3 @@ RUN git clone https://github.com/nim-lang/Nim /Nim && \
 
 ##
 
-## EXPOSE (VNC)
-
-EXPOSE 5900
-
-## CMD
-
-WORKDIR /build
-
-CMD [ "make", "build" ]

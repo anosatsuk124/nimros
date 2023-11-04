@@ -5,6 +5,9 @@ on: push
 jobs:
   ci-image:
     name: Pre-build image
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout

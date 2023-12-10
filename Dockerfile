@@ -45,8 +45,7 @@ COPY . .
 
 RUN make prepare
 
-RUN --mount=type=cache,target=/root/work/target \
-    make build
+RUN make build
 
 ##
 
@@ -54,13 +53,11 @@ RUN --mount=type=cache,target=/root/work/target \
 
 WORKDIR /Nim
 
-RUN --mount=type=cache,target=/Nim \
-  git clone https://github.com/nim-lang/Nim /Nim/nim && \
-  cd /Nim/nim && \
+RUN git clone https://github.com/nim-lang/Nim /Nim && \
   git checkout v2.0.0 && \
   sh build_all.sh
 
-RUN echo 'export PATH=$PATH:/Nim/nim/bin' >> ~/.bashrc
+RUN echo 'export PATH=$PATH:/Nim/bin' >> ~/.bashrc
 
 ##
 

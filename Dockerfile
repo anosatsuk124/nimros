@@ -5,7 +5,8 @@ USER root
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt-get update && apt-get upgrade -y && apt-get install -y \
-    gcc clang cmake make automake autogen patch cpio gzip bzip2 wget git sed tar
+    gcc clang cmake make automake autogen patch cpio gzip bzip2 wget git sed tar \
+    build-essential
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \

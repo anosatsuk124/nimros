@@ -41,14 +41,16 @@ QEMU_DEVICES	=	-device nec-usb-xhci,id=xhci $\
 								-device usb-mouse $\
 								-device usb-kbd
 QEMU_MONITOR	=	-monitor stdio
-QEMU_DISPLAY	?=	-vnc :0
+
+QEMU_VNC	=	-vnc :0
+QEMU_SPICE	=	-spice port=5930,disable-ticketing=on
+QEMU_DISPLAY	?=	-display default
 
 QEMU_ARGS	=	$(QEMU_MEMORY) $\
 							$(QEMU_VGA) $\
 							$(QEMU_DRIVES) $\
 							$(QEMU_DEVICES) $\
 							$(QEMU_MONITOR) $\
-							$(QEMU_DISPLAY) $\
 							$(QEMU_EXTRA_ARGS)
 
 # Environment Variables
@@ -64,7 +66,7 @@ endef
 all:	build run
 
 .PHONY:	run
-run:	qemu
+run:	qemu-spice
 
 .PHONY:	build
 build:	$(BOOTLOADER_DIR) $(KERNEL_DIR)
@@ -103,11 +105,20 @@ $(KERNEL_DIR):	prepare
 	cd $(KERNEL_DIR); \
 	$(CARGO) build -Z unstable-options --profile $(RUST_PROFILE) --out-dir $(DIST_DIR)
 
-.PHONY:	qemu
-qemu:
-	$(QEMU_SYSTEM_X86_64) $(QEMU_ARGS)
+.PHONY:	qemu-spice
+qemu-spice:
+	$(QEMU_SYSTEM_X86_64) $(QEMU_SPICE) $(QEMU_ARGS)
+
+.PHONY:	qemu-vnc
+qemu-vnc:
+	$(QEMU_SYSTEM_X86_64) $(QEMU_VNC) $(QEMU_ARGS)
+
+.PHONY:	qemu-native
+qemu-native:
+	$(QEMU_SYSTEM_X86_64) $(QEMU_DISPLAY) $(QEMU_ARGS)
 
 .PHONY: env
 env:	export ENV_VARS:=$(ENV_VARS)
 env:
 	@echo "$$ENV_VARS"
+

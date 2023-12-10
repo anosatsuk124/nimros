@@ -28,7 +28,7 @@ jobs:
           push: always
 
   ci-build:
-    name: Run `make all` ci-build in dev container
+    name: Run `make build` ci-build in dev container
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout

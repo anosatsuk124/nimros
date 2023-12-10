@@ -13,7 +13,8 @@
     }
   ],
   "appPort": [
-    "5905:5900" // For VNC
+    "5905:5900", // For VNC
+    "5930:5930" // For spice
   ],
   "containerUser": "root",
   "workspaceFolder": "/root/work",

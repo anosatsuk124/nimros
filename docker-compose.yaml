@@ -1,0 +1,22 @@
+version: "3"
+
+volumes:
+  devcontainer-nimros-rust-target:
+
+services:
+  builder:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+      cache_from:
+        - ghcr.io/anosatsuk124/nimros-devcontainer
+        - ghcr.io/anosatsuk124/nimros-devcontainer-arm64
+
+    volumes:
+      - type: volume
+        source: devcontainer-nimros-rust-target
+        target: /work/target
+
+    ports:
+      - 5905:5900 # For VNC
+      - 5930:5930 # For spice

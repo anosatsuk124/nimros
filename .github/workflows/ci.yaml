@@ -22,9 +22,20 @@ jobs:
 
       - name: Pre-build dev container image
         uses: devcontainers/ci@v0.3
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
         with:
           imageName: ghcr.io/${{ github.repository }}-devcontainer
           cacheFrom: ghcr.io/${{ github.repository }}-devcontainer
+          push: always
+
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/arm64
+        with:
+          imageName: ghcr.io/${{ github.repository }}-devcontainer-arm64
+          cacheFrom: ghcr.io/${{ github.repository }}-devcontainer-arm64
           push: always
 
   ci-build:

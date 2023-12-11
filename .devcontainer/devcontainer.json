@@ -1,22 +1,9 @@
 {
   "name": "nimros",
-  "build": {
-    "dockerfile": "../Dockerfile",
-    "context": "../",
-    "cacheFrom": "ghcr.io/anosatsuk124/nimros-devcontainer"
-  },
-  "mounts": [
-    {
-      "type": "volume",
-      "source": "devcontainer-nimros-rust-target",
-      "target": "${containerWorkspaceFolder}/target"
-    }
-  ],
-  "appPort": [
-    "5905:5900", // For VNC
-    "5930:5930" // For spice
-  ],
+  "dockerComposeFile": ["../docker-compose.yaml", "./compose.extend.yaml"],
+  "service": "builder",
+  "shutdownAction": "stopCompose",
   "containerUser": "root",
-  "workspaceFolder": "/root/work",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/root/work,type=bind,consistency=cached"
+  "workspaceFolder": "/work",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind,consistency=cached"
 }

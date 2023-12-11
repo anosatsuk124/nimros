@@ -93,6 +93,7 @@ prepare:
 	$(RUSTUP) component add rust-src
 	$(RUSTUP) component add llvm-tools-preview
 	$(RUSTUP) target add x86_64-unknown-linux-gnu
+	$(RUSTUP) target add x86_64-unknown-linux-musl
 	$(RUSTUP) target add x86_64-unknown-uefi
 
 $(BOOTLOADER_DIR):	prepare
